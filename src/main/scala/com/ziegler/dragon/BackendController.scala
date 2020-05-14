@@ -14,7 +14,8 @@ import org.mongodb.scala.bson.ObjectId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BackendController(themesData : MongoCollection[Theme], diceData : MongoCollection[Dice], storiesData : MongoCollection[Story]) extends ScalatraServlet with JacksonJsonSupport with CorsSupport with AtmosphereSupport {
+class BackendController(themesData : MongoCollection[Theme], diceData : MongoCollection[Dice], storiesData : MongoCollection[Story]) extends ScalatraServlet
+  with JacksonJsonSupport with CorsSupport with AtmosphereSupport {
 
   protected implicit lazy val jsonFormats: Formats = DefaultFormats + new ObjectIdSerializer
 
@@ -25,7 +26,7 @@ class BackendController(themesData : MongoCollection[Theme], diceData : MongoCol
       case (TypeInfo(ObjectIdClass, _), json) => json match {
         case JObject(JField("id", JString(s)) :: Nil) if (ObjectId.isValid(s)) =>
           new ObjectId(s)
-        case x => throw new MappingException(s"Can't convert $x to ObjectId")
+        case x => throw new MappingException("Can't convert $x to ObjectId")
       }
     }
 
@@ -44,27 +45,55 @@ class BackendController(themesData : MongoCollection[Theme], diceData : MongoCol
 
   get("/") {
     val themes = DragonDb.Theme.list(themesData)
-    themes.toList
+    themes
   }
 
   get("/dices") {
     val dices = DragonDb.Dice.list(diceData)
-    dices.toList
+    dices
   }
 
   atmosphere("/broadcast") {
     new AtmosphereClient {
-      def receive = {
-        case Connected =>
-        case Disconnected(disconnector, Some(error)) =>
-        case Error(Some(error)) =>
-        case TextMessage(text) => broadcast(text,Others)
-        case JsonMessage(json) =>
-          val story = json.extract[Story]
-          val dbStory = DragonDb.Story.createOrUpdate(story,storiesData)
-          val message = Extraction.decompose(dbStory)
-          broadcast(message, Everyone)
+      private def broadcastStory(dbStory: Story, filter:ClientFilter) = {
+        val message = Extraction.decompose(dbStory)
+        broadcast(message, filter)
       }
+
+      private def getNextStory = {
+        DragonDb.Story.getFirst(storiesData) match {
+          case Some(story) => story.members = uuid :: story.members
+                              DragonDb.Story.createOrUpdate(story, storiesData)
+                              broadcastStory(story,Me)
+          case None =>
+        }
+      }
+
+      def receive = {
+        case Connected => getNextStory
+        case Disconnected(disconnector, Some(error)) =>
+          DragonDb.Story.getForUUID(uuid, storiesData) match {
+            case Some(story) => story.members = story.members.filter(m => m != uuid)
+                                DragonDb.Story.createOrUpdate(story, storiesData)
+            case None =>
+          }
+        case Error(Some(error)) =>
+        case TextMessage(text) =>
+           DragonDb.Story.getForUUID(uuid, storiesData) match {
+             case Some(story) => broadcastStory(story,Me)
+             case None => getNextStory
+           }
+        case JsonMessage(json) =>
+          val storyAst = (json \ "story").toOption
+          storyAst match  {
+            case None =>
+            case Some (ast) =>  val story = ast.extract[Story]
+              val dbStory = DragonDb.Story.createOrUpdate(story,storiesData)
+              broadcastStory(dbStory,Everyone)
+          }
+      }
+
+
     }
   }
 

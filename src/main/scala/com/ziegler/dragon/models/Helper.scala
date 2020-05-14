@@ -23,6 +23,7 @@ object Helpers {
 
     def results(): Seq[C] = Await.result(observable.toFuture(), Duration(10, TimeUnit.SECONDS))
     def headResult() = Await.result(observable.head(), Duration(10, TimeUnit.SECONDS))
+    def headOptionResult() = Await.result(observable.headOption(), Duration(10,TimeUnit.SECONDS))
     def printResults(initial: String = ""): Unit = {
       if (initial.length > 0) print(initial)
       results().foreach(res => println(converter(res)))

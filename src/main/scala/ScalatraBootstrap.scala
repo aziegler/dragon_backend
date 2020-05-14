@@ -18,7 +18,7 @@ class ScalatraBootstrap extends LifeCycle {
     val diceColl : MongoCollection[Dice] = database.getCollection("dices")
     val storyColl :MongoCollection[Story] = database.getCollection("stories")
     context.setInitParameter("org.scalatra.cors.allowCredentials","false")
-    context.mount(new BackendController (themesColl, diceColl, storyColl),"/*")
+    context.mount(new BackendController (themesColl, diceColl, storyColl),"/dragon/*")
   }
 
   override def destroy(context: ServletContext): Unit = {

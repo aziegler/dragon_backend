@@ -4,6 +4,7 @@ import org.mongodb.scala._
 import Helpers._
 import org.mongodb.scala.bson.ObjectId
 import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.elemMatch
 import org.mongodb.scala.model.{Filters, ReplaceOptions, UpdateOptions}
 
 
@@ -23,13 +24,16 @@ case class Dice(_id:ObjectId, color : String, faces : List[String])
 
 object Story {
   def apply(theme: String, story: List[List[String]]): Story =
-    new Story(new ObjectId(), theme, story, false)
+    new Story(new ObjectId(), theme, story, false, List())
 
   def apply(_id: ObjectId, theme: String, story: List[List[String]]): Story =
-    new Story(_id, theme, story, false)
+    new Story(_id, theme, story, false, List())
+
+  def apply(_id: ObjectId, theme: String, story : List[List[String]],finished:Boolean):Story =
+    new Story(_id,theme,story, finished,List())
 }
 
-case class Story(_id:ObjectId, theme : String, story : List[List[String]], finished : Boolean)
+case class Story(_id:ObjectId, theme : String, story : List[List[String]], finished : Boolean, var members : List[String])
 
 
 /*
@@ -74,6 +78,14 @@ object DragonDb {
         coll.replaceOne(equal(("_id"), story._id),story).results()
         coll.find(equal(("_id"), story._id)).headResult()
       }
+    }
+
+    def getFirst(coll : MongoCollection[Story]) : Option[Story] = {
+      coll.find(equal("finished",false)).headOptionResult()
+    }
+
+    def getForUUID(uuid:String, coll:MongoCollection[Story]) : Option[Story] = {
+      coll.find(equal("members",uuid)).headOptionResult()
     }
   }
 
