@@ -22,6 +22,7 @@ libraryDependencies ++= Seq(
   "org.eclipse.jetty" % "jetty-webapp" % "9.4.19.v20190610" % "container",
   "javax.servlet" % "javax.servlet-api" % "3.1.0" % "provided",
   "org.scalatra" %% "scalatra-json" % "2.7.0",
+  "org.scalatra" %% "scalatra-atmosphere" % ScalatraVersion,
   "org.json4s" %% "json4s-jackson" % "3.6.7",
   "org.mongodb.scala" %% "mongo-scala-driver" % "4.0.3"
 

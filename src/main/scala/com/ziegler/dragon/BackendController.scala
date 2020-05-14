@@ -8,10 +8,14 @@ import org.scalatra._
 import org.json4s.{CustomSerializer, DefaultFormats, FieldSerializer, Formats, JValue, JsonAST, MappingException, Serializer, TypeInfo}
 import org.mongodb.scala.MongoCollection
 import org.scalatra.json._
+import org.scalatra.atmosphere._
 import org.mongodb.scala._
 import org.mongodb.scala.bson.ObjectId
 
-class BackendController(themesData : MongoCollection[Theme], diceData : MongoCollection[Dice]) extends ScalatraServlet with JacksonJsonSupport with CorsSupport {
+
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class BackendController(themesData : MongoCollection[Theme], diceData : MongoCollection[Dice]) extends ScalatraServlet with JacksonJsonSupport with CorsSupport with AtmosphereSupport {
 
   protected implicit lazy val jsonFormats: Formats = DefaultFormats + new ObjectIdSerializer
 
@@ -47,6 +51,18 @@ class BackendController(themesData : MongoCollection[Theme], diceData : MongoCol
   get("/dices") {
     val dices = DragonDb.Dice.list(diceData)
     dices.toList
+  }
+
+  atmosphere("/broadcast") {
+    new AtmosphereClient {
+      def receive = {
+        case Connected =>
+        case Disconnected(disconnector, Some(error)) =>
+        case Error(Some(error)) =>
+        case TextMessage(text) => broadcast(text,Others)
+        case JsonMessage(json) => broadcast(json, Others)
+      }
+    }
   }
 
 
