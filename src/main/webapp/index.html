@@ -1,0 +1,28 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Main</title>
+    <script src="dragon.js"></script>
+</head>
+
+<body>
+<div id="DragonGame"></div>
+<script>
+  var app = Elm.Game.init({
+    node: document.getElementById('DragonGame')
+  });
+
+var socket = new WebSocket('ws://localhost:8080/dragon/broadcast');
+
+app.ports.sendMessage.subscribe(function(message) {
+    socket.send(JSON.stringify(message));
+});
+
+socket.addEventListener("message", function(event) {
+    app.ports.messageReceiver.send(JSON.parse(event.data));
+});
+
+
+  </script>
+</body>
+</html>
