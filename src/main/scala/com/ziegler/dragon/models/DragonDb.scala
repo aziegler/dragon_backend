@@ -21,6 +21,15 @@ object Dice {
 
 case class Dice(_id:ObjectId, color : String, faces : List[String])
 
+object Story {
+  def apply(theme: String, story: List[List[String]]): Story =
+    new Story(new ObjectId(), theme, story, false)
+
+  def apply(_id: ObjectId, theme: String, story: List[List[String]]): Story =
+    new Story(_id, theme, story, false)
+}
+
+case class Story(_id:ObjectId, theme : String, story : List[List[String]], finished : Boolean)
 
 
 /*
@@ -38,8 +47,6 @@ diceRollList = [
 object DragonDb {
 
   object Dice {
-
-
     def createOrUpdate(dice:Dice, coll : MongoCollection[Dice]) : Unit = {
       val dices = coll.find(equal(("_id"), dice._id))
       if (dices.results().isEmpty)
@@ -54,6 +61,19 @@ object DragonDb {
 
     def delete(dice:Dice, coll: MongoCollection[Dice]): Unit = {
       coll.deleteOne(equal(("_id"), dice._id)).results()
+    }
+  }
+
+  object Story {
+    def createOrUpdate(story:Story, coll : MongoCollection[Story]) : Story = {
+      val stories = coll.find(equal(("_id"), story._id))
+      if (stories.results().isEmpty) {
+        coll.insertOne(story).results()
+        story
+      } else {
+        coll.replaceOne(equal(("_id"), story._id),story).results()
+        coll.find(equal(("_id"), story._id)).headResult()
+      }
     }
   }
 

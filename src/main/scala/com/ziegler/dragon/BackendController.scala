@@ -1,21 +1,20 @@
 package com.ziegler.dragon
 
 import com.ziegler.dragon.data.DatabaseSession
-import com.ziegler.dragon.models.{Dice, DragonDb, Theme}
+import com.ziegler.dragon.models.{Dice, DragonDb, Story, Theme}
 import org.bson.types.ObjectId
 import org.json4s.JsonAST.{JArray, JField, JInt, JLong, JObject, JString}
 import org.scalatra._
-import org.json4s.{CustomSerializer, DefaultFormats, FieldSerializer, Formats, JValue, JsonAST, MappingException, Serializer, TypeInfo}
+import org.json4s.{CustomSerializer, DefaultFormats, Extraction, FieldSerializer, Formats, JValue, JsonAST, MappingException, Serializer, TypeInfo}
 import org.mongodb.scala.MongoCollection
 import org.scalatra.json._
 import org.scalatra.atmosphere._
 import org.mongodb.scala._
 import org.mongodb.scala.bson.ObjectId
 
-
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class BackendController(themesData : MongoCollection[Theme], diceData : MongoCollection[Dice]) extends ScalatraServlet with JacksonJsonSupport with CorsSupport with AtmosphereSupport {
+class BackendController(themesData : MongoCollection[Theme], diceData : MongoCollection[Dice], storiesData : MongoCollection[Story]) extends ScalatraServlet with JacksonJsonSupport with CorsSupport with AtmosphereSupport {
 
   protected implicit lazy val jsonFormats: Formats = DefaultFormats + new ObjectIdSerializer
 
@@ -60,7 +59,11 @@ class BackendController(themesData : MongoCollection[Theme], diceData : MongoCol
         case Disconnected(disconnector, Some(error)) =>
         case Error(Some(error)) =>
         case TextMessage(text) => broadcast(text,Others)
-        case JsonMessage(json) => broadcast(json, Others)
+        case JsonMessage(json) =>
+          val story = json.extract[Story]
+          val dbStory = DragonDb.Story.createOrUpdate(story,storiesData)
+          val message = Extraction.decompose(dbStory)
+          broadcast(message, Everyone)
       }
     }
   }
